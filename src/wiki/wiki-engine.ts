@@ -37,6 +37,8 @@ import { parseFrontmatter, upsertFrontmatterField, mergeFrontmatterArrayField, r
 import { setGenerationComplete } from '../core/incomplete-page-cleaner';
 import { convertPdfToMarkdown, UnsupportedProviderError, EncryptedPdfError } from '../core/pdf-converter';
 import { MineruPdfError, MINERU_PHASE_KEY } from '../core/mineru-converter';
+import { convertAndSplitEpub, type EpubConversionResult } from '../core/epub-converter';
+import { MarkitdownDesktopOnlyError, MarkitdownNotFoundError } from '../core/markitdown-cli';
 import { hashBody, checkContentRequirements } from '../core/source-requirements';
 import { resolveModelForTask } from '../core/model-resolver';
 import type { SourceRejection } from '../core/source-requirements';
@@ -720,6 +722,68 @@ export class WikiEngine {
   }
 
   /**
+   * EPUB ingest branch.
+   *
+   * Converts the EPUB binary to Markdown via MarkItDown CLI on desktop,
+   * splits it into chapter notes, writes the sidecar folder and notes into
+   * the vault, and ingests each chapter note sequentially into the wiki.
+   */
+  private async ingestEpubSource(file: TFile, opts?: IngestOptions): Promise<void> {
+    const lang = this.settings.language;
+    const readingMsg = getText(lang, 'epubReadingInProgress').replace('{filename}', file.basename);
+    new Notice(readingMsg, NOTICE_NORMAL);
+    this.onProgress?.(readingMsg);
+    this.updateStatusBar([file.basename, getText(lang, 'epubReadingInProgress').replace('{filename}', file.basename)].join(' · '));
+
+    let result: EpubConversionResult;
+    try {
+      result = await convertAndSplitEpub({
+        app: this.app,
+        file,
+        settings: {
+          markitdownCliPath: this.settings.markitdownCliPath,
+          epubChapterMinChars: this.settings.epubChapterMinChars,
+        },
+        subtle: this.subtle,
+        ...(this.abortController ? { abortSignal: this.abortController.signal } : {}),
+      });
+    } catch (error) {
+      if (error instanceof MarkitdownDesktopOnlyError) {
+        new Notice(getText(lang, 'errorMarkitdownDesktopOnly'), NOTICE_NORMAL);
+        this.reportSkip(file, { reason: 'incompatible-type', detail: error.message }, opts);
+        return;
+      }
+      if (error instanceof MarkitdownNotFoundError) {
+        const msg = getText(lang, 'errorMarkitdownNotFound').replace('{cli}', error.cliPath);
+        new Notice(msg, NOTICE_NORMAL);
+        this.reportSkip(file, { reason: 'incompatible-type', detail: error.message }, opts);
+        return;
+      }
+      throw error;
+    }
+
+    const sidecarNotice = getText(lang, 'epubSidecarCreated')
+      .replace('{count}', String(result.chapterFiles.length))
+      .replace('{folder}', result.sidecarFolder);
+    new Notice(sidecarNotice, NOTICE_NORMAL);
+
+    // Ingest each chapter note sequentially into the Wiki
+    for (let i = 0; i < result.chapterFiles.length; i++) {
+      this.checkCancelled('ingest');
+      const chapterFile = result.chapterFiles[i];
+      this.updateStatusBar([
+        file.basename,
+        `Chapter ${i + 1}/${result.chapterFiles.length} (${chapterFile.basename})`,
+      ].join(' · '));
+
+      await this.ingestSource(chapterFile, {
+        ...opts,
+        interactive: false,
+      });
+    }
+  }
+
+  /**
    * v1.25.0 PR2 redo + PR3: PDF ingest branch.
    *
    * Converts the PDF binary to Markdown via the configured LLM provider's
@@ -1001,6 +1065,21 @@ export class WikiEngine {
     // `ingestConversionSource` re-enters this method).
     if (!opts?.contentOverride) {
       const ext = file.extension.toLowerCase();
+      if (ext === 'epub') {
+        try {
+          return await this.ingestEpubSource(file, opts);
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            this.wasCancelled = true;
+            new Notice(getText(this.settings.language, 'ingestionCancelled'), NOTICE_NORMAL);
+            return;
+          }
+          throw error;
+        } finally {
+          if (this.abortController !== null) this.endIngestion();
+        }
+      }
+
       const needsMineruConversion = this.settings.markdownConversionBackend === 'mineru'
         && (MINERU_CONVERSION_EXTENSIONS as readonly string[]).includes(ext);
       const isPdf = ext === 'pdf';

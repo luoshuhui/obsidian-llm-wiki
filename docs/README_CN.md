@@ -152,15 +152,16 @@ SEO metadata (not user-visible, parsed by crawlers / LLMs) — 简体中文本�
 - **🧩 智能合并与矛盾状态** — 重复页面合并时保留别名；矛盾被标记并注明来源归属；`reviewed: true` 的页面受保护不被覆盖。
 - **🎨 一套标签词汇表，由你掌握** — 一个页面可携带的标签来自三处，都由你掌控：你的笔记里的嵌套标签、wiki 页面已有的嵌套标签，以及 设置 → Wiki → 标签词汇表 → *自定义* 中的列表（用于还没有任何笔记携带的新词）。提示词、写入闸门、Lint 与 retag 读取的都是这一份列表，所以模型被提供的就是能落盘的；列表之外的值会被丢弃，绝不写入。源页面同样携带它，紧挨其 form 标签。小型/本地模型仍可能漂移（约十次中有一次返回模型内置分类）——闸门会拦下，Lint 会报告没有标签的页面。设计锚点见 [Issue #328](https://github.com/GD4AI/obsidian-llm-wiki/issues/328)。
 
-### 📄 文档 / PDF / 图片 摄入
+### 📄 文档 / PDF / 图片 / EPUB 摄入
 
-五种导入入口，每次摄入可选其一：
+六种导入入口，每次摄入可选其一：
 
 1. **🆕 内置 MinerU 后端 (v1.27.0, #404)** — 设置 → Wiki 配置 → Markdown 转换后端 → *MinerU*。经 [MinerU 的 Precise 解析器](https://mineru.net/apiManage/docs) 处理 PDF、图片（PNG/JPG/JPEG/JP2/WebP/GIF/BMP）与 Office 文档（DOC/DOCX/PPT/PPTX/XLS/XLSX）。API token 存于 Obsidian SecretStorage。是科学论文、扫描文档、需要保留版式的 Office 文件的最佳路径。服务器限制：每个 PDF 200 MB / 200 页，每个压缩包 256 MB / 10,000 文件。
 2. **☁️ 云端 Provider 原生 PDF** — Anthropic、OpenAI、Google Gemini 与 AWS Bedrock（Anthropic + OpenAI 变体）开箱即用地将 PDF 作为文件部分读取。选定 Provider 即可，无需额外设置。
 3. **🖥️ Apple Silicon 本地 OCR** — [oMLX](https://github.com/jundot/omlx) 内置 Microsoft Markitdown 作为 PDF→Markdown 后端。在 oMLX 中启用 Markitdown，加载 [百度 Unlimited-OCR](https://huggingface.co/baidu/Unlimited-OCR)（3B / 570M 活跃参数，2026-06 开源）作为视觉模型，将插件指向 oMLX 作为自定义 OpenAI 兼容 Provider，开启 **Force PDF Support**，选择 oMLX 服务的多模态模型。PDF 全程不离开你的机器。
 4. **🛠️ 第三方提取器（MinerU 在线 UI）** — 不想接入 API token 时，用 [MinerU Extractor 在线服务](https://mineru.net/OpenSourceTools/Extractor) 做快速手动转换。下载转换好的 `.md`，放到 wiki 文件夹之外的 vault 任意位置，再作为普通 Markdown 笔记摄入。
 5. **🔌 Force PDF Support** — 对任何其他接受文件部分的 OpenAI/Anthropic 兼容端点，插件都会尝试调用（设置 → LLM 配置 → 高级）。端点决定成败，失败会显示本地化的 Notice。
+6. **📚 EPUB 电子书摄入 (Microsoft MarkItDown)** — 支持 `.epub` 格式书籍（设置 → Wiki 配置 → MarkItDown CLI 路径）。通过本地安装的微软 `markitdown` CLI 将电子书解析为 Markdown，内置章节拆分器（`epub-splitter`）自动按标题与字数阈值拆分为 `<书名>/` Sidecar 目录笔记（生成 `00 - Overview.md` 目录索引与章节文件），按顺序流水线接入 Wiki 编译，避免全书上下文超长导致截断。
 
 **Office 格式的注意事项：** Obsidian 不原生渲染 `.docx` / `.xlsx` / `.pptx`（[file-formats](https://obsidian.md/help/file-formats)），因此 Office 文件的实用工作流是：MinerU 转成 `.md` → 插件把 `.md` 摄取为 wiki 页面，原始 Office 文件留作参考。如需内联预览 Office 文件，使用社区插件 **Pandoc Plugin**、**Docxer**、**Md Importer** 或 **Office Reader**。
 
