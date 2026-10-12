@@ -666,6 +666,11 @@ export interface LLMWikiSettings {
   ingestModelUseCustom?: boolean;
   lintModelUseCustom?: boolean;
   queryModelUseCustom?: boolean;
+
+  /** MarkItDown CLI command or path for EPUB conversion. */
+  markitdownCliPath?: string;
+  /** Minimum characters for an extracted EPUB chapter. */
+  epubChapterMinChars?: number;
 }
 
 export interface QueryHistoryMessage {
@@ -1647,4 +1652,6 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   // bearer wire shape for every existing user.
   bedrockAuthMethod: 'api-key',
   bedrockSsoStartUrl: '',
+  markitdownCliPath: 'markitdown',
+  epubChapterMinChars: 300,
 };

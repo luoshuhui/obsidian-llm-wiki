@@ -62,7 +62,7 @@ You write notes. They sit in folders. Finding what relates to what means remembe
 | **LLM providers** | ✅ 16+ (Anthropic, OpenAI, Bedrock, Gemini, DeepSeek, Qwen, Grok, Kimi, GLM, MiniMax, Step, Hunyuan, MiMo, Gemma, Codex OAuth, Ollama, LM Studio, OpenRouter, Anthropic-Compatible, …) | 🟡 OpenAI-compatible | 🟡 Subscription via Claude Code / Codex | 🟡 OpenAI-compatible |
 | **Retrieval & query pipeline** | ✅ **PPR + Monte Carlo** over `[[wiki-link]]` graph | 🟡 2-hop decay (4-signal heuristic) | 🟡 Louvain community detection | 🟡 BM25 + semantic over chunks |
 | **Graph visualization** | ✅ Obsidian's native Graph View (built in, zero extra size) | 🟡 Custom sigma.js + graphology in desktop app | 🟡 vis.js `graph.html` (separate file) | ❌ Read-only browser viewer |
-| **Ingest formats** | ✅ **Markdown + PDF + images + Office (DOCX/PPTX/XLSX)** — one switch flips between native PDF (Anthropic / OpenAI / Bedrock / Gemini) and the built-in MinerU multi-format backend | 🟡 Markdown + PDF | 🟡 Markdown / code files only | 🟡 Markdown only |
+| **Ingest formats** | ✅ **Markdown + PDF + images + Office (DOCX/PPTX/XLSX) + EPUB** — native PDF, MinerU multi-format, and local Microsoft Markitdown EPUB ingest with auto chapter-splitting | 🟡 Markdown + PDF | 🟡 Markdown / code files only | 🟡 Markdown only |
 
 Three we left off the table: **sdyckjq/llm-wiki-skill** was a Codex skill that 404s today (deleted by author); **atomicstrata** is included even though its retrieval is chunk-based because it's the most active TypeScript alternative; **nashsu** ships the largest user base of the three (10k+ stars, others 2k+) but is a Tauri desktop app, not an Obsidian plugin.
 
@@ -147,9 +147,9 @@ That's it. The plugin modifies nothing in your original notes — only creates n
 - **🧩 Smart merge & contradiction state** — duplicates merge while preserving aliases; contradictions are flagged with source attribution; `reviewed: true` pages are protected from overwrite.
 - **🎨 One tag vocabulary, yours** — the tags a page may carry come from three places you control: the nested tags of your notes, the nested tags already on wiki pages, and the list in Settings → Wiki → Tag Vocabulary → *Custom* (the place for a term no note carries yet). Prompt, write gate, lint and retag all read this one list, so what the model is offered is exactly what lands on disk; a value outside it is dropped, never written. Source pages carry it too, next to their form tag. Small/local models still drift (about one in ten returns the model's built-in taxonomy) — the gate catches it, and Lint reports a page left without tags. Design anchor: [Issue #328](https://github.com/GD4AI/obsidian-llm-wiki/issues/328).
 
-### 📄 Document / PDF / Image ingest
+### 📄 Document / PDF / Image / EPUB ingest
 
-Five on-ramps, switchable per ingest:
+Six on-ramps, switchable per ingest:
 
 1. **🆕 Built-in MinerU backend (v1.27.0, #404)** — Settings → Wiki Configuration → Markdown Conversion Backend → *MinerU*. PDF + images (PNG/JPG/JPEG/JP2/WebP/GIF/BMP) + Office (DOC/DOCX/PPT/PPTX/XLS/XLSX) through [MinerU's Precise parser](https://mineru.net/apiManage/docs). Token in Obsidian SecretStorage. Best path for scientific papers, scanned documents, and Office files where layout preservation matters. Server caps: 200 MB / 200 pages per PDF, 256 MB / 10,000 files per archive.
 2. **☁️ Cloud providers with native PDF** — Anthropic, OpenAI, Google Gemini, and AWS Bedrock (Anthropic + OpenAI variants) read PDFs as file parts out of the box. No setup beyond provider selection.
@@ -157,6 +157,7 @@ Five on-ramps, switchable per ingest:
 4. **🛠️ Third-party extractor (MinerU online UI)** — use the [MinerU Extractor online service](https://mineru.net/OpenSourceTools/Extractor) for a quick manual UI when you don't want to wire up an API token. Download the converted `.md`, drop it in your vault outside the wiki folder, and ingest as a regular Markdown note.
 5. **🔌 Force PDF Support** — for any other OpenAI/Anthropic-compatible endpoint that accepts file parts, the plugin attempts the call (Settings → LLM Configuration → Advanced). The endpoint decides; failures surface as a localized Notice.
 6. **🖼️ Embedded Markdown images** — turn on *Analyze embedded images during Markdown ingestion* in Advanced settings to analyze every eligible local `![[image.png]]` and `![alt](image.png)` embed. Each image is analyzed with its nearest Markdown paragraphs, sent in 20 MiB visual-evidence packages, and capped at 10 MiB; remote URLs are never downloaded. For testable per-image output, optionally enable *Save embedded image visual evidence to source page* to add a collapsible audit section to the generated source page.
+7. **📚 EPUB book ingest (Microsoft MarkItDown)** — Ingest `.epub` e-books via Microsoft's `markitdown` CLI (Settings → Wiki Configuration → MarkItDown CLI Path). The built-in chapter splitter (`epub-splitter`) splits the full converted text into clean `<book>/` sidecar chapter notes (including a `00 - Overview.md` index with bi-directional links), ingesting them sequentially into the wiki pipeline to prevent LLM context exhaustion on long books.
 
 **Caveat for Office formats:** Obsidian does not natively render `.docx` / `.xlsx` / `.pptx` ([file-formats](https://obsidian.md/help/file-formats)), so the practical workflow for Office files is: MinerU converts to `.md`, the plugin ingests that `.md` into wiki pages, and the original Office file is kept around for reference. Use a community plugin like Pandoc Plugin / Docxer / Md Importer / Office Reader if you need to inline-preview Office files.
 

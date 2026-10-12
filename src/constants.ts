@@ -32,7 +32,19 @@ export const WIKI_SUBFOLDERS = {
  * Text sources are read directly; PDF sources are transcribed through the
  * configured LLM provider's native document-input capability (v1.25.0 PR2).
  */
-export const COMPATIBLE_SOURCE_EXTENSIONS = ['md', 'markdown', 'txt', 'text', 'pdf'] as const;
+export const COMPATIBLE_SOURCE_EXTENSIONS = ['md', 'markdown', 'txt', 'text', 'pdf', 'epub'] as const;
+
+/** Default executable command name or path for MarkItDown CLI. */
+export const DEFAULT_MARKITDOWN_CLI_PATH = 'markitdown';
+
+/** Minimum characters for a split EPUB chapter to avoid trivial sections. */
+export const DEFAULT_EPUB_CHAPTER_MIN_CHARS = 300;
+
+/** MarkItDown execution timeout (ms). */
+export const MARKITDOWN_TIMEOUT_MS = 180000;
+
+/** EPUB conversion cache TTL (ms, default 30 days). */
+export const EPUB_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * File extensions (lowercase, no dot) that route through the markdown

@@ -77,6 +77,28 @@ export function renderWikiConfigSection(tab: LLMWikiSettingTab, containerEl: HTM
       text.inputEl.type = 'password';
     });
   setSettingsVisible([mineruTokenSetting], tempSettings.markdownConversionBackend === 'mineru');
+
+  // MarkItDown CLI path for EPUB
+  new Setting(containerEl)
+    .setName(tab.getText('markitdownCliPathName'))
+    .setDesc(tab.getText('markitdownCliPathDesc'))
+    .addText(text => text
+      .setPlaceholder(tab.getText('markitdownCliPathPlaceholder'))
+      .setValue(tempSettings.markitdownCliPath || 'markitdown')
+      .onChange((value) => { tempSettings.markitdownCliPath = value.trim() || 'markitdown'; }));
+
+  // EPUB Chapter Min Chars
+  new Setting(containerEl)
+    .setName(tab.getText('epubChapterMinCharsName'))
+    .setDesc(tab.getText('epubChapterMinCharsDesc'))
+    .addText(text => text
+      .setPlaceholder('300')
+      .setValue(String(tempSettings.epubChapterMinChars ?? 300))
+      .onChange((value) => {
+        const parsed = parseInt(value, 10);
+        tempSettings.epubChapterMinChars = isNaN(parsed) || parsed < 50 ? 300 : parsed;
+      }));
+
   // Granularity + custom limits
   let customEntitySetting: Setting | null = null;
   let customConceptSetting: Setting | null = null;
